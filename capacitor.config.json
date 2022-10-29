@@ -1,0 +1,6 @@
+{
+	"appId": "io.ionic.starter",
+	"appName": "Camiones",
+	"webDir": "dist",
+	"bundledWebRuntime": false
+}

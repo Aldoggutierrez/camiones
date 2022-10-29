@@ -1,0 +1,8 @@
+{
+  "name": "Camiones",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue",
+  "id": "a0f55c30"
+}
