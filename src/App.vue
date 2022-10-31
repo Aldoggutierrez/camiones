@@ -4,11 +4,8 @@
       <ion-menu content-id="main-content" type="overlay">
         <ion-content>
           <ion-list id="inbox-list">
-            <ion-list-header>Inbox</ion-list-header>
-            <ion-note>hi@ionicframework.com</ion-note>
-  
-            <ion-menu-toggle auto-hide="false" v-for="(p, i) in appPages" :key="i">
-              <ion-item @click="selectedIndex = i" router-direction="root" :router-link="p.url" lines="none" detail="false" class="hydrated" :class="{ selected: selectedIndex === i }">
+            <ion-menu-toggle :auto-hide="false" v-for="(p, i) in appPages" :key="i">
+              <ion-item @click="selectedIndex = i" router-direction="root" :router-link="p.url" lines="none" :detail="false" class="hydrated" :class="{ selected: selectedIndex === i }">
                 <ion-icon slot="start" :ios="p.iosIcon" :md="p.mdIcon"></ion-icon>
                 <ion-label>{{ p.title }}</ion-label>
               </ion-item>
@@ -16,12 +13,14 @@
           </ion-list>
   
           <ion-list id="labels-list">
-            <ion-list-header>Labels</ion-list-header>
-  
-            <ion-item v-for="(label, index) in labels" lines="none" :key="index">
-              <ion-icon slot="start" :ios="bookmarkOutline" :md="bookmarkSharp"></ion-icon>
-              <ion-label>{{ label }}</ion-label>
-            </ion-item>
+            <ion-list-header>Rutas</ion-list-header>
+            <ion-searchbar placeholder="Buscar Ruta" :value="search" @ion-input="search = $event.target.value;"></ion-searchbar>
+            <ion-menu-toggle :auto-hide="false" v-for="(route, index) in busRoutes" :key="index">
+              <ion-item lines="none" @click="selectRoute(route.file)">
+                <ion-icon slot="start" :ios="busOutline" :md="busSharp"></ion-icon>
+                <ion-label>{{ route.name }}</ion-label>
+              </ion-item>
+            </ion-menu-toggle>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -31,10 +30,16 @@
 </template>
 
 <script lang="ts">
-import { IonApp, IonContent, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonMenu, IonMenuToggle, IonNote, IonRouterOutlet, IonSplitPane } from '@ionic/vue';
-import { defineComponent, ref } from 'vue';
+import { IonApp, IonContent, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonMenu, IonMenuToggle, IonRouterOutlet, IonSplitPane, useIonRouter, IonSearchbar } from '@ionic/vue';
+import { defineComponent, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { archiveOutline, archiveSharp, bookmarkOutline, bookmarkSharp, heartOutline, heartSharp, mailOutline, mailSharp, paperPlaneOutline, paperPlaneSharp, trashOutline, trashSharp, warningOutline, warningSharp } from 'ionicons/icons';
+import { archiveOutline, archiveSharp, bookmarkOutline, bookmarkSharp, heartOutline, heartSharp, mailOutline, mailSharp, mapOutline, mapSharp, trashOutline, trashSharp, warningOutline, warningSharp, busOutline,busSharp } from 'ionicons/icons';
+
+interface route {
+  file:string,
+  id:number,
+  name:string
+}
 
 export default defineComponent({
   name: 'App',
@@ -48,51 +53,26 @@ export default defineComponent({
     IonListHeader, 
     IonMenu, 
     IonMenuToggle, 
-    IonNote, 
     IonRouterOutlet, 
     IonSplitPane,
+    IonSearchbar
   },
   setup() {
+    const ionRouter = useIonRouter();
     const selectedIndex = ref(0);
+    const search = ref()
     const appPages = [
       {
-        title: 'Inbox',
-        url: '/folder/Inbox',
-        iosIcon: mailOutline,
-        mdIcon: mailSharp
-      },
-      {
-        title: 'Outbox',
-        url: '/folder/Outbox',
-        iosIcon: paperPlaneOutline,
-        mdIcon: paperPlaneSharp
-      },
-      {
-        title: 'Favorites',
-        url: '/folder/Favorites',
-        iosIcon: heartOutline,
-        mdIcon: heartSharp
-      },
-      {
-        title: 'Archived',
-        url: '/folder/Archived',
-        iosIcon: archiveOutline,
-        mdIcon: archiveSharp
-      },
-      {
-        title: 'Trash',
-        url: '/folder/Trash',
-        iosIcon: trashOutline,
-        mdIcon: trashSharp
-      },
-      {
-        title: 'Spam',
-        url: '/folder/Spam',
-        iosIcon: warningOutline,
-        mdIcon: warningSharp
+        title: 'Mapa',
+        url: '/map',
+        iosIcon: mapOutline,
+        mdIcon: mapSharp
       }
     ];
-    const labels = ['Family', 'Friends', 'Notes', 'Work', 'Travel', 'Reminders'];
+
+    const selectRoute = async(file:string) => {
+      ionRouter.push(`/map/${file}`);
+    }
     
     const path = window.location.pathname.split('folder/')[1];
     if (path !== undefined) {
@@ -100,11 +80,30 @@ export default defineComponent({
     }
     
     const route = useRoute();
-    
+
+    const busRoutes = ref<route[]>([]);
+
+    const getRoutes = async() => {
+      const data = await fetch('./assets/routes.json')
+      const json = await data.json()
+      busRoutes.value = json
+    }  
+
+    watch(search,(value) => {
+      if (value == "") getRoutes()
+      else{
+        const results = busRoutes.value.filter(route => {
+          return route.name.includes(value)
+        })
+        busRoutes.value = results
+      }
+    })
+
+    getRoutes()
     return { 
       selectedIndex,
       appPages, 
-      labels,
+      selectRoute,
       archiveOutline, 
       archiveSharp, 
       bookmarkOutline, 
@@ -113,13 +112,17 @@ export default defineComponent({
       heartSharp, 
       mailOutline, 
       mailSharp, 
-      paperPlaneOutline, 
-      paperPlaneSharp, 
+      mapSharp, 
+      mapOutline,
       trashOutline, 
       trashSharp, 
       warningOutline, 
       warningSharp,
-      isSelected: (url: string) => url === route.path ? 'selected' : ''
+      busRoutes,
+      busOutline,
+      busSharp,
+      search,
+      isSelected: (url: string) => url === route.path ? 'selected' : '',
     }
   }
 });
