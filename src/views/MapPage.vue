@@ -17,13 +17,21 @@ const route = useRoute();
 const store = useStore()
 const { id } = route.params
 
-const markers = ref<mapboxgl.Marker[]>([])
+const verifySelectedRoute = async () => {
+    if (store.selectedRoute != undefined) return
+    if (store.routes.length == 0) await store.getRoutes()
+    const selected = store.routes.find((route,index) => {
+        return route.id == parseInt(id as string)
+    })
+    store.selectedRoute = selected    
+}
 
 store.getRouteLine(id);
 
 const mapa = ref<HTMLDivElement>()
 
 onMounted(async () => {
+    await verifySelectedRoute()
     await store.getLocation()
 
     mapboxgl.accessToken = 'pk.eyJ1IjoiYWxkb2d0eiIsImEiOiJjbDl1YmZkcnEwZmV6M25xeWtnZmQ0eGo4In0.cQAskiO8GStVGV29fI9dTg';
@@ -155,10 +163,10 @@ const getBusesLoading = async (map: mapboxgl.Map) => {
         return
     }
     const buses: busInterface[] = data.data
-    if (markers.value.length) {
-        markers.value.forEach((marker, index) => {
+    if (store.markers.length) {
+        store.markers.forEach((marker, index) => {
             marker.remove()
-            markers.value.splice(index, 1)
+            store.markers = []
         })
     }
     buses.forEach((bus, index) => {
@@ -175,7 +183,14 @@ const getBusesLoading = async (map: mapboxgl.Map) => {
             'left': [markerRadius, (markerHeight - markerRadius) * -1],
             'right': [-markerRadius, (markerHeight - markerRadius) * -1]
         };
-        const popup = new mapboxgl.Popup({ offset: popupOffsets, closeButton: false }).setHTML(`<div class="p-3 rounded"><p><span class="font-bold">Economico:</span> ${bus.r_economico}</p><p><span class="font-bold">Hora:</span> ${bus.r_hora}</p>`)
+        const popupEl = window.document.createElement('div')
+        const number = window.document.createElement('p')
+        number.innerText = bus.r_economico.toString()
+        const time = window.document.createElement('p')
+        time.innerText = bus.r_hora
+        popupEl.appendChild(number)
+        popupEl.appendChild(time)
+        const popup = new mapboxgl.Popup({ offset: popupOffsets, closeButton: false}).setText(`numero:${bus.r_economico}\n hora:${bus.r_hora}`)
         const el = document.createElement('div');
         const width = 40;
         const height = 40;
@@ -184,7 +199,7 @@ const getBusesLoading = async (map: mapboxgl.Map) => {
         el.style.width = `${width}px`;
         el.style.height = `${height}px`;
         el.style.backgroundSize = '100%';
-        markers.value[index] = new mapboxgl.Marker(el).setLngLat([bus.r_lon, bus.r_lat]).setPopup(popup).addTo(map);
+        store.markers[index] = new mapboxgl.Marker(el).setLngLat([bus.r_lon, bus.r_lat]).setPopup(popup).addTo(map);
     })
     store.lastUpdate = new Date().toLocaleTimeString()
     console.log(store.lastUpdate);
@@ -205,7 +220,7 @@ const getBusesLoading = async (map: mapboxgl.Map) => {
             <ion-item>
                 <ion-label>
                     <h1>{{ store.selectedRoute?.name }}</h1>
-                    <p v-if="store.lastUpdate">ultima actualización{{ store.lastUpdate }}</p>
+                    <p v-if="store.lastUpdate">ultima actualización {{ store.lastUpdate }}</p>
                 </ion-label>
             </ion-item>
             <div id="mapa" ref="mapa"></div>
@@ -220,18 +235,11 @@ const getBusesLoading = async (map: mapboxgl.Map) => {
     height: 100%;
 }
 
-/* .p-3 {
-    padding: 0.75rem;
-}
-
-.font-bold {
-    font-weight: 700;
-}
-
-.rounded {
-    border-radius: 0.75rem;
-} */
 .mapboxgl-ctrl-logo {
     display: none !important;
+}
+.popup{
+    color: black;
+    background-color: white;
 }
 </style>

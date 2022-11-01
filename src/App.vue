@@ -79,8 +79,6 @@ export default defineComponent({
       ionRouter.push(`/map/${route.id}`);
     }
     
-    console.log(route.path);
-
     watch(search,(value) => {
       store.filterRoutes(value)
     })
