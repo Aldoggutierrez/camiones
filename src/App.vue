@@ -5,7 +5,7 @@
         <ion-content>
           <ion-list id="inbox-list">
             <ion-menu-toggle :auto-hide="false" v-for="(p, i) in appPages" :key="i">
-              <ion-item @click="selectedIndex = i" router-direction="root" :router-link="p.url" lines="none" :detail="false" class="hydrated" :class="{ selected: selectedIndex === i }">
+              <ion-item lines="none" :detail="false" class="hydrated">
                 <ion-icon slot="start" :ios="p.iosIcon" :md="p.mdIcon"></ion-icon>
                 <ion-label>{{ p.title }}</ion-label>
               </ion-item>
@@ -15,8 +15,8 @@
           <ion-list id="labels-list">
             <ion-list-header>Rutas</ion-list-header>
             <ion-searchbar placeholder="Buscar Ruta" :value="search" @ion-input="search = $event.target.value;"></ion-searchbar>
-            <ion-menu-toggle :auto-hide="false" v-for="(route, index) in busRoutes" :key="index">
-              <ion-item lines="none" @click="selectRoute(route.file)">
+            <ion-menu-toggle :auto-hide="false" v-for="(route, index) in store.routes" :key="index">
+              <ion-item lines="none" @click="selectRoute(route)" :class="{ selected: parseInt($route.params.id as string) == route.id }">
                 <ion-icon slot="start" :ios="busOutline" :md="busSharp"></ion-icon>
                 <ion-label>{{ route.name }}</ion-label>
               </ion-item>
@@ -33,13 +33,15 @@
 import { IonApp, IonContent, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonMenu, IonMenuToggle, IonRouterOutlet, IonSplitPane, useIonRouter, IonSearchbar } from '@ionic/vue';
 import { defineComponent, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { archiveOutline, archiveSharp, bookmarkOutline, bookmarkSharp, heartOutline, heartSharp, mailOutline, mailSharp, mapOutline, mapSharp, trashOutline, trashSharp, warningOutline, warningSharp, busOutline,busSharp } from 'ionicons/icons';
+import { mapOutline, mapSharp, busOutline, busSharp } from 'ionicons/icons';
+import { useStore } from "./stores/mainStore";
+
 
 interface route {
-  file:string,
-  id:number,
-  name:string
-}
+    file:string,
+    id:number,
+    name:string
+  }
 
 export default defineComponent({
   name: 'App',
@@ -59,7 +61,9 @@ export default defineComponent({
   },
   setup() {
     const ionRouter = useIonRouter();
-    const selectedIndex = ref(0);
+    const route = useRoute();
+    const store = useStore()
+
     const search = ref()
     const appPages = [
       {
@@ -70,58 +74,25 @@ export default defineComponent({
       }
     ];
 
-    const selectRoute = async(file:string) => {
-      ionRouter.push(`/map/${file}`);
+    const selectRoute = async(route:route) => {
+      store.selectedRoute = route
+      ionRouter.push(`/map/${route.id}`);
     }
     
-    const path = window.location.pathname.split('folder/')[1];
-    if (path !== undefined) {
-      selectedIndex.value = appPages.findIndex(page => page.title.toLowerCase() === path.toLowerCase());
-    }
-    
-    const route = useRoute();
-
-    const busRoutes = ref<route[]>([]);
-
-    const getRoutes = async() => {
-      const data = await fetch('./assets/routes.json')
-      const json = await data.json()
-      busRoutes.value = json
-    }  
+    console.log(route.path);
 
     watch(search,(value) => {
-      if (value == "") getRoutes()
-      else{
-        const results = busRoutes.value.filter(route => {
-          return route.name.includes(value)
-        })
-        busRoutes.value = results
-      }
+      store.filterRoutes(value)
     })
 
-    getRoutes()
+    store.getRoutes()
     return { 
-      selectedIndex,
       appPages, 
       selectRoute,
-      archiveOutline, 
-      archiveSharp, 
-      bookmarkOutline, 
-      bookmarkSharp, 
-      heartOutline, 
-      heartSharp, 
-      mailOutline, 
-      mailSharp, 
-      mapSharp, 
-      mapOutline,
-      trashOutline, 
-      trashSharp, 
-      warningOutline, 
-      warningSharp,
-      busRoutes,
       busOutline,
       busSharp,
       search,
+      store,
       isSelected: (url: string) => url === route.path ? 'selected' : '',
     }
   }
